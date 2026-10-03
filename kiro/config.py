@@ -219,6 +219,14 @@ BASE_RETRY_DELAY: float = 1.0
 HIDDEN_MODELS: Dict[str, str] = {
     # Claude 3.7 Sonnet - legacy model, maps to "auto" on new runtime endpoint
     # "claude-3.7-sonnet": "auto",
+    # Models available in Kiro but not advertised by /ListAvailableModels
+    "claude-sonnet-5": "claude-sonnet-5",
+    "claude-opus-5": "claude-opus-5",
+    "claude-opus-5.5": "claude-opus-5.5",
+    "claude-opus-4.8": "claude-opus-4.8",
+    "gpt-5.6-sol": "gpt-5.6-sol",
+    "gpt-5.6-terra": "gpt-5.6-terra",
+    "gpt-5.6-luna": "gpt-5.6-luna",
 }
 
 # ==================================================================================================
@@ -248,6 +256,9 @@ HIDDEN_MODELS: Dict[str, str] = {
 # Default: {"auto-kiro": "auto"} to avoid Cursor IDE conflict
 MODEL_ALIASES: Dict[str, str] = {
     "auto-kiro": "auto",  # Default alias to avoid Cursor's "auto" model conflict
+    "claude-gpt-sol": "gpt-5.6-sol",
+    "claude-gpt-terra": "gpt-5.6-terra",
+    "claude-gpt-luna": "gpt-5.6-luna",
 }
 
 # Models to hide from /v1/models endpoint.

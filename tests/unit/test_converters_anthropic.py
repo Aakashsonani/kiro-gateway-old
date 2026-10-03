@@ -1746,6 +1746,130 @@ class TestAnthropicToKiro:
             "max_thinking_length tag SHOULD be present even with tool results"
         )
 
+    def test_system_role_messages_extracted_to_system_prompt(self):
+        """
+        What it does: Verifies system-role messages in the messages list are extracted to the system prompt.
+        Purpose: Some clients send system messages inside the Anthropic messages list (OpenAI convention).
+        """
+        print("Setup: Request with system-role message in messages list...")
+        request = AnthropicMessagesRequest(
+            model="claude-sonnet-4-5",
+            messages=[
+                AnthropicMessage(role="system", content="You are a pirate."),
+                AnthropicMessage(role="user", content="Hello!"),
+            ],
+            max_tokens=1024,
+        )
+
+        print("Action: Converting to Kiro payload...")
+        with patch(
+            "kiro.converters_anthropic.get_model_id_for_kiro",
+            return_value="claude-sonnet-4.5",
+        ):
+            with patch("kiro.converters_core.FAKE_REASONING_ENABLED", False):
+                result = anthropic_to_kiro(request, "conv-123", "arn:aws:test")
+
+        print(f"Result: {result}")
+        current_content = result["conversationState"]["currentMessage"][
+            "userInputMessage"
+        ]["content"]
+        print(f"Current content: {current_content}")
+        assert "You are a pirate." in current_content
+        assert "Hello!" in current_content
+
+    def test_system_role_messages_merged_with_system_field(self):
+        """
+        What it does: Verifies system-role messages are merged with the top-level system field.
+        Purpose: Both sources of system content should appear in the final payload.
+        """
+        print("Setup: Request with both system field and system-role message...")
+        request = AnthropicMessagesRequest(
+            model="claude-sonnet-4-5",
+            messages=[
+                AnthropicMessage(role="system", content="Also be concise."),
+                AnthropicMessage(role="user", content="Hello!"),
+            ],
+            max_tokens=1024,
+            system="You are a helpful assistant.",
+        )
+
+        print("Action: Converting to Kiro payload...")
+        with patch(
+            "kiro.converters_anthropic.get_model_id_for_kiro",
+            return_value="claude-sonnet-4.5",
+        ):
+            with patch("kiro.converters_core.FAKE_REASONING_ENABLED", False):
+                result = anthropic_to_kiro(request, "conv-123", "arn:aws:test")
+
+        print(f"Result: {result}")
+        current_content = result["conversationState"]["currentMessage"][
+            "userInputMessage"
+        ]["content"]
+        print(f"Current content: {current_content}")
+        assert "You are a helpful assistant." in current_content
+        assert "Also be concise." in current_content
+
+    def test_multiple_system_role_messages_concatenated(self):
+        """
+        What it does: Verifies multiple system-role messages are all extracted.
+        Purpose: Edge case where client sends several system messages.
+        """
+        print("Setup: Request with multiple system-role messages...")
+        request = AnthropicMessagesRequest(
+            model="claude-sonnet-4-5",
+            messages=[
+                AnthropicMessage(role="system", content="You are a pirate."),
+                AnthropicMessage(role="system", content="Speak in rhymes."),
+                AnthropicMessage(role="user", content="Hello!"),
+            ],
+            max_tokens=1024,
+        )
+
+        print("Action: Converting to Kiro payload...")
+        with patch(
+            "kiro.converters_anthropic.get_model_id_for_kiro",
+            return_value="claude-sonnet-4.5",
+        ):
+            with patch("kiro.converters_core.FAKE_REASONING_ENABLED", False):
+                result = anthropic_to_kiro(request, "conv-123", "arn:aws:test")
+
+        current_content = result["conversationState"]["currentMessage"][
+            "userInputMessage"
+        ]["content"]
+        print(f"Current content: {current_content}")
+        assert "You are a pirate." in current_content
+        assert "Speak in rhymes." in current_content
+
+    def test_system_role_messages_not_in_conversation_history(self):
+        """
+        What it does: Verifies system-role messages are excluded from unified messages.
+        Purpose: System messages should become the system prompt, not appear as conversation turns.
+        """
+        print("Setup: Request with system message between user messages...")
+        request = AnthropicMessagesRequest(
+            model="claude-sonnet-4-5",
+            messages=[
+                AnthropicMessage(role="system", content="You are helpful."),
+                AnthropicMessage(role="user", content="First question"),
+                AnthropicMessage(role="assistant", content="First answer"),
+                AnthropicMessage(role="user", content="Second question"),
+            ],
+            max_tokens=1024,
+        )
+
+        print("Action: Converting to Kiro payload...")
+        with patch(
+            "kiro.converters_anthropic.get_model_id_for_kiro",
+            return_value="claude-sonnet-4.5",
+        ):
+            with patch("kiro.converters_core.FAKE_REASONING_ENABLED", False):
+                result = anthropic_to_kiro(request, "conv-123", "arn:aws:test")
+
+        history = result["conversationState"].get("history", [])
+        print(f"History roles: {[m.get('role', 'unknown') for m in history]}")
+        for msg in history:
+            assert msg.get("role") != "system", "System message should not appear in history"
+
 
 # ==================================================================================================
 # Tests for Client Thinking Budget Support (Issue #111)

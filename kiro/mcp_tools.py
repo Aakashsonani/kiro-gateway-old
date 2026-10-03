@@ -161,7 +161,8 @@ async def call_kiro_mcp_api(
             response = await client.post(mcp_url, json=mcp_request, headers=headers)
             
             if response.status_code != 200:
-                logger.error(f"MCP API error: {response.status_code}")
+                error_body = response.text[:500]
+                logger.error(f"MCP API error: {response.status_code} - {error_body}")
                 return None, None
             
             mcp_response = response.json()
@@ -634,7 +635,7 @@ async def handle_native_web_search(
                 "type": "error",
                 "error": {
                     "type": "api_error",
-                    "message": "Web search failed. Please try again."
+                    "message": "Web search failed. This is a server-side issue, usually temporary — try again in a moment. If it persists, check your inference gateway (0.0.0.0:8000)."
                 }
             }
         )

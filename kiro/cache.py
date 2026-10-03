@@ -73,7 +73,8 @@ class ModelInfoCache:
                         Each dictionary must contain the "modelId" key.
         """
         async with self._lock:
-            logger.info(f"Updating model cache. Found {len(models_data)} models.")
+            model_ids = [model["modelId"] for model in models_data if "modelId" in model]
+            logger.info(f"Updating model cache. Found {len(models_data)} models: {model_ids}")
             self._cache = {model["modelId"]: model for model in models_data}
             self._last_update = time.time()
     
